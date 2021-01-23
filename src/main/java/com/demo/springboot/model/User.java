@@ -40,7 +40,7 @@ public class User {
     private String lastName;
 
     @NotEmpty(message = "Email field cannot be blank")
-    @Email
+    @Email(message = "Email field is supposed to be like johnny@gmail.com")
     private String email;
 
     @NotEmpty(message = "Password field cannot be blank")

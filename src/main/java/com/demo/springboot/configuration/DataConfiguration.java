@@ -1,44 +1,60 @@
 package com.demo.springboot.configuration;
 
-import org.hibernate.boot.MetadataSources;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.service.ServiceRegistry;
+import com.demo.springboot.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-
-import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
-public class DataConfiguration {
+@EnableWebSecurity
+public class DataConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private UserService userService;
 
     @Bean
-    public DataSource dataSource(DbConnProperties properties) {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName(properties.getDriverClassName());
-        dataSource.setUrl(properties.getUrl());
-        dataSource.setUsername(properties.getUsername());
-        dataSource.setPassword(properties.getPassword());
-        return dataSource;
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public MetadataSources getMetaSource(DbConnProperties properties) {
-        Map<String, String> settings = new HashMap<>();
-        settings.put("connection.driver_class", properties.getDriverClassName());
-        settings.put("dialect", properties.getDialect());
-        settings.put("hibernate.connection.url", properties.getUrl());
-        settings.put("hibernate.connection.username", properties.getUsername());
-        settings.put("hibernate.connection.password", properties.getPassword());
-        settings.put("hibernate.current_session_context_class", properties.getCurrentSessionContextClass());
-        settings.put("hibernate.show_sql", properties.getShowSql());
-        settings.put("hibernate.format_sql", properties.getFormatSql());
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider auth = new DaoAuthenticationProvider();
+        auth.setUserDetailsService(userService);
+        auth.setPasswordEncoder(passwordEncoder());
+        return auth;
+    }
 
-        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
-                .applySettings(settings).build();
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(authenticationProvider());
+    }
 
-        return new MetadataSources(serviceRegistry);
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests().antMatchers(
+                "/registration**",
+                "/js/**",
+                "/css/**",
+                "/img/**").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin()
+                .loginPage("/login")
+                .permitAll()
+                .and()
+                .logout()
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .logoutSuccessUrl("/login?logout")
+                .permitAll();
     }
 }

@@ -39,4 +39,14 @@ public class UserRegistrationController {
 
         return "redirect:/registration?success";
     }
+
+    @RequestMapping(value = "/login", method=RequestMethod.GET)
+    public String login() {
+        return "login";
+    }
+
+    @RequestMapping(value = "/welcome", method={RequestMethod.POST, RequestMethod.GET})
+    public String welcome() {
+        return "welcome";
+    }
 }
